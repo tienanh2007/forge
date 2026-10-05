@@ -512,7 +512,8 @@ def api_task(be: Backend, qs, body):
     return {"task": be.state.load_task(key), "tests": be.items(key, "tests"), "prs": be.items(key, "prs"),
             "issues": be.items(key, "issues"), "inbox": be.items(key, "inbox"),
             "spec_md": read_text(base / "spec.md"), "log_tail": tail(base / "log.md", LOG_TAIL_LINES),
-            "tree": be.tree(key), "active_sessions": sorted(active) if active is not None else None}
+            "tree": be.tree(key), "active_sessions": sorted(active) if active is not None else None,
+            "task_states": list(getattr(be.state, "STATES", ()))}
 
 
 def api_prs(be: Backend, qs, body):
@@ -623,6 +624,27 @@ def api_post_issue_state(be: Backend, qs, body):
     return _issue_call(be, be.issues.set_state, key, issue_id, st, note=note.strip(), by="user")
 
 
+def api_post_task_state(be: Backend, qs, body):
+    if not be.lib_state:
+        raise ApiError(503, "forge_lib.state not available")
+    key = be.check_key(body.get("key"))
+    if "/" not in key:
+        raise ApiError(400, "expected a task key")
+    st, note = body.get("state"), body.get("note") or ""
+    if not isinstance(st, str) or not isinstance(note, str):
+        raise ApiError(400, "state (and optional note) must be strings")
+    if st not in be.state.STATES:
+        raise ApiError(400, f"unknown state {st!r}")
+    note = note.strip()
+    if st == "handed-back":  # the UI is the one path that bypasses `forge handback`'s gate
+        note = "via UI (gate skipped)" + (f": {note}" if note else "")
+    from forge_lib import tasks
+    before = be.state.load_task(key).get("clickup_sync")
+    task = _issue_call(be, tasks.set_state, key, st, note or "set via UI", allow_handback=True)
+    sync = task.get("clickup_sync")
+    return {"task": task, "clickup_sync": sync, "clickup_pushed": sync is not None and sync != before}
+
+
 def api_post_refresh(be: Backend, qs, body):
     key = be.check_key(body.get("key"), required=False)
     started = time.time()
@@ -718,6 +740,7 @@ GET_ROUTES = {"/api/projects": api_projects, "/api/tree": api_tree, "/api/projec
               "/api/fs/tree": api_fs_tree, "/api/fs/file": api_fs_file}
 POST_ROUTES = {"/api/inbox": api_post_inbox, "/api/refresh": api_post_refresh,
                "/api/issue/decide": api_post_issue_decide, "/api/issue/state": api_post_issue_state,
+               "/api/task/state": api_post_task_state,
                "/api/agent/message": api_post_agent_message, "/api/agent/open": api_post_agent_open,
                "/api/agent/dispatch": api_post_agent_dispatch}
 

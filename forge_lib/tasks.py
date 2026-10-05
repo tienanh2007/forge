@@ -3,7 +3,7 @@ import re
 import sys
 from pathlib import Path
 
-from forge_lib import keys, render, state, util
+from forge_lib import clickup_sync, keys, render, state, util
 from forge_lib.errors import IntegrationError, UsageError
 from forge_lib.integrations import clickup
 
@@ -125,7 +125,7 @@ def set_state(key: str, new_state: str, note: str = "", allow_handback: bool = F
     task = state.load_task(key)
     task["state"] = new_state
     task.setdefault("state_history", []).append({"state": new_state, "at": util.now_iso(), "note": note})
-    return state.save(key, task)
+    return clickup_sync.after_transition(key, state.save(key, task))
 
 
 def merge(key: str, patch: dict) -> dict:
