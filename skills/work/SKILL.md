@@ -87,6 +87,22 @@ CLAUDE.md coding standards. Use superpowers:verification-before-completion befor
   superpowers:receiving-code-review. Resolve threads after fixing (gate requires 0 unresolved).
 - Sonar issues: fix only if the fix is < 20 lines; otherwise explain in the PR and log it.
 
+### 7a. Walkthrough artifact (required once a PR is open)
+
+Publish a Claude artifact that walks a reviewer through the problem and the fix, so nobody has to
+reconstruct it from the diff.
+- Load `artifact-design` first (and `artifact-diagramming` if listed), then write one HTML page in
+  your scratchpad and publish it with the Artifact tool (private by default).
+- Content, in order: the problem in 2-3 sentences; a **mermaid** diagram of the broken flow (where it
+  goes wrong, highlighted); a **mermaid** diagram of the fixed flow; what changed (files/functions,
+  per PR if stacked); how it is tested (test names, CI run links); risks and follow-ups. Load mermaid
+  from `https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js` and render with a theme that works
+  in light and dark.
+- Keep it factual: every claim must match the code and evidence in the PR.
+- Link it: add `Walkthrough: <artifact URL>` to each PR body (`gh pr edit`) and to `log.md`
+  (not `PRs.md` - forge regenerates it from `prs.json` and drops extra lines). Republish to the same file path when the fix changes after review.
+- Tasks that hand back with no PR (parked/investigation only) skip this step.
+
 ## 8. Inbox - check every major step and whenever a message arrives
 
 Messages arrive via SendMessage from the coordinator or via a resume prompt. Regularly:
@@ -135,7 +151,7 @@ child (log which). Hand back only when all children are handed-back/done.
 
 1. `forge prs refresh $K && forge gate $K` - must exit 0. Fix every reason it lists.
 2. ```bash
-   forge handback $K --summary "<what was delivered, PR links, tests evidence, follow-ups>" \
+   forge handback $K --summary "<what was delivered, PR links, walkthrough artifact URL, tests evidence, follow-ups>" \
      --docs "<docs updated with paths, or 'none needed: <why>'>"
    ```
 3. Update ClickUp subtask to its review status and comment the summary.

@@ -10,6 +10,8 @@ from forge_lib.integrations import clickup
 GITHUB_REMOTE_RE = re.compile(r"github\.com[:/]([^/\s]+)/([^/\s]+?)(?:\.git)?/?$")
 INHERITED = ("repo", "github", "sonar_project_key", "base_branch")
 DEFAULT_MAX_PARALLEL = 5
+# Workers and the coordinator must share a mode, or each cross-session message is held for approval.
+DEFAULT_PERMISSION_MODE = "auto"
 
 
 def _warn(msg: str) -> None:
@@ -44,7 +46,8 @@ def _write_stub(path: Path, text: str) -> None:
 
 
 def init_project(slug: str, title: str, repo: str, github: str | None = None, sonar_key: str | None = None,
-                 base_branch: str = "main", max_parallel: int = DEFAULT_MAX_PARALLEL, clickup_parent: str | None = None) -> dict:
+                 base_branch: str = "main", max_parallel: int = DEFAULT_MAX_PARALLEL, clickup_parent: str | None = None,
+                 permission_mode: str = DEFAULT_PERMISSION_MODE) -> dict:
     keys.validate_segment(slug)
     if state.exists(slug):
         raise UsageError(f"project already exists: {slug}")
@@ -55,7 +58,7 @@ def init_project(slug: str, title: str, repo: str, github: str | None = None, so
         "clickup_parent": resolve_clickup_ref(clickup_parent) if clickup_parent else None,
         "repos": [{"path": repo_path, "github": github or detect_github(repo_path),
                    "sonar_project_key": sonar_key, "base_branch": base_branch}],
-        "max_parallel": max_parallel, "coordinator_session": None, "created": now, "updated": now,
+        "max_parallel": max_parallel, "permission_mode": permission_mode, "coordinator_session": None, "created": now, "updated": now,
     }
     d = state.project_dir(slug)
     (d / keys.TASKS).mkdir(parents=True, exist_ok=True)

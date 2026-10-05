@@ -32,7 +32,7 @@ class CliTest(ForgeTestCase):
         self.assertIn("REFUSED", out)
         code, out, _ = self.forge("dispatch", "proj/T1-a", "--dry-run")
         self.assertEqual(code, 0)
-        self.assertTrue(out.startswith("claude --bg -n forge-proj-T1-a -w forge-proj-T1-a 'You are the forge worker"))
+        self.assertTrue(out.startswith("claude --bg --permission-mode auto -n forge-proj-T1-a -w forge-proj-T1-a 'You are the forge worker"))
         self.assertEqual(self.forge("set", "proj/T1-a", "--merge", '{"session":{"id":"S1","name":"n"}}')[0], 0)
         self.assertEqual(self.forge("task-for-session", "S1")[1].strip(), "proj/T1-a")
         self.assertEqual(self.forge("task-for-session", "S2")[0], 1)

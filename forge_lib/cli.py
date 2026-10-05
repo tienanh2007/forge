@@ -33,7 +33,7 @@ def cmd_home(args):
 def cmd_init_project(args):
     p = tasks.init_project(args.slug, args.title, args.repo, github=args.github, sonar_key=args.sonar_key,
                            base_branch=args.base_branch, max_parallel=args.max_parallel,
-                           clickup_parent=args.clickup_parent)
+                           clickup_parent=args.clickup_parent, permission_mode=args.permission_mode)
     _out(args, p, str(state.task_dir(p["slug"])))
 
 
@@ -323,6 +323,9 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--sonar-key")
     sp.add_argument("--base-branch", default="main")
     sp.add_argument("--max-parallel", type=int, default=tasks.DEFAULT_MAX_PARALLEL)
+    sp.add_argument("--permission-mode", default=tasks.DEFAULT_PERMISSION_MODE,
+                    choices=["auto", "acceptEdits", "bypassPermissions", "dontAsk", "manual", "default"],
+                    help="worker permission mode; match the coordinator session")
 
     sp = add("new-task", cmd_new_task)
     sp.add_argument("parent_key")

@@ -38,13 +38,24 @@ def worker_prompt(key: str, message: str | None = None) -> str:
     return prompt + (f"\n\n{message}" if message else "")
 
 
+def permission_mode(key: str) -> str | None:
+    """The project's worker permission mode; projects created before the setting get the default.
+    "default" (or empty) launches without the flag, i.e. Claude Code's own default mode."""
+    mode = state.load_project(keys.project_of(key)).get("permission_mode", tasks.DEFAULT_PERMISSION_MODE)
+    return None if mode in (None, "", "default") else mode
+
+
+def _bg(key: str, session: dict) -> list[str]:
+    mode = permission_mode(key)
+    return ["claude", "--bg"] + (["--permission-mode", mode] if mode else []) + ["-n", session["name"]]
+
+
 def first_command(key: str, session: dict, message: str | None = None) -> list[str]:
-    return ["claude", "--bg", "-n", session["name"], "-w", session["worktree"],
-            worker_prompt(key, message)]
+    return _bg(key, session) + ["-w", session["worktree"], worker_prompt(key, message)]
 
 
 def resume_command(key: str, session: dict, message: str | None = None) -> list[str]:
-    return ["claude", "--bg", "-n", session["name"], "--resume", session["id"], message or f"Resume task {key}; check inbox."]
+    return _bg(key, session) + ["--resume", session["id"], message or f"Resume task {key}; check inbox."]
 
 
 def list_agents(include_all: bool = False) -> list[dict]:
