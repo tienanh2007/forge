@@ -128,6 +128,29 @@ checks green with zero unresolved threads and Sonar OK, no open inbox messages, 
 children. The Stop hook keeps a worker going while its inbox has unacked messages or while it is
 `in-review` with a failing gate (max 5 consecutive blocks, then it marks the task `blocked`).
 
+## ClickUp status sync
+
+Every task state change (`forge set-state`, `forge handback`, dispatch, the UI) pushes the mapped
+status to the task's linked ClickUp task (`clickup.id`), only when it differs from the last pushed
+one. It is best effort: the outcome is recorded as `clickup_sync: {status, at, error}` in task.json,
+failures are appended to `log.md`, and the forge transition always succeeds. Disabled when no
+`CLICKUP_TOKEN` is configured or `FORGE_NO_CLICKUP=1`.
+
+Default map (override per project with `clickup_status_map` in project.json, e.g.
+`forge set <slug> --merge '{"clickup_status_map":{"in-review":"code review"}}'`):
+scoped->planned, dispatched/in-progress/coordinating->in progress, blocked->blocked,
+in-review/handed-back->review, done->done, cancelled->cancelled.
+
+```bash
+forge clickup link <key> <id|ENG-123|url>     # record clickup {id, custom_id, url} on a task
+forge clickup link-subtasks <slug>            # link tasks whose dir starts with a parent subtask's custom id
+forge clickup sync <slug|key> --dry-run       # check the map against the list, show current -> target
+forge clickup sync <slug|key>                 # push the mapped status for every linked task
+```
+
+The UI task page has a state selector (all states, optional note). Choosing `handed-back` there
+skips the gate after a confirm, and the history records "via UI (gate skipped)".
+
 ## Skills
 
 | Skill | Who | Purpose |
@@ -139,7 +162,7 @@ children. The Stop hook keeps a worker going while its inbox has unacked message
 | `forge:relay` | coordinator (loop) | inbox -> workers, surface handbacks |
 | `forge:review-handback` | coordinator | accept or send back |
 | `forge:work` | worker | the end-to-end task loop |
-| `forge:clickup-task` | worker | ClickUp subtask + status sync |
+| `forge:clickup-task` | worker | ClickUp subtask + transition comments |
 | `forge:stacked-prs` | worker | git-spice stacks |
 | `forge:ci-sonar-gate` | worker | CI + Sonar + threads until gate passes |
 | `forge:write-issue` | worker | structured asks to you (+ optional artifact) |

@@ -1,6 +1,6 @@
 ---
 name: clickup-task
-description: Use when a forge task needs its ClickUp subtask created under the parent ticket, or its ClickUp status/comment updated on a state transition (started, in review, blocked, handed back, done).
+description: Use when a forge task needs its ClickUp subtask created under the parent ticket, or a ClickUp comment posted on a state transition (started, in review, blocked, handed back, done). forge itself syncs ClickUp status.
 ---
 
 # forge: ClickUp subtask
@@ -24,29 +24,26 @@ print or store the token.
    Assign to the user if the parent is assigned to them.
    Fallback: `POST https://api.clickup.com/api/v2/list/<list_id>/task` body
    `{"name":...,"description":...,"parent":"<parent id>"}`.
-5. Record it:
+5. Record it (this is what enables forge's automatic status sync):
    ```bash
-   forge set <key> --merge '{"clickup":{"id":"<id>","custom_id":"<custom_id>","url":"<url>"}}'
+   forge clickup link <key> <id-or-url>
    ```
    `custom_id` may be null for workspaces without custom ids - then use `T<n>` in branch names.
 6. Log to `log.md`: `ClickUp subtask <custom_id> <url>`.
 
-## Status updates on transitions
+## Status updates are automatic
 
-Statuses differ per list: read the valid ones once (`mcp__clickup__clickup_get_list` -> `statuses`)
-and map by closest name:
+Do not set ClickUp status yourself. Every `forge set-state` / `forge handback` pushes the mapped
+status to the linked task (`clickup.id`) and records the outcome as `clickup_sync` on task.json; a
+failure is logged to `log.md` and never blocks the transition. The map is the project's
+`clickup_status_map` (default: scoped->planned, dispatched/in-progress/coordinating->in progress,
+blocked->blocked, in-review/handed-back->review, done->done, cancelled->cancelled).
+If `clickup_sync.error` is set, tell the coordinator; `forge clickup sync <key>` re-pushes.
 
-| forge state | ClickUp status (closest match) |
-|---|---|
-| in-progress | in progress |
-| blocked | blocked (else keep in progress + comment) |
-| in-review | in review / code review |
-| handed-back | in review (+ comment with handback summary) |
-| done | done / complete / closed (coordinator only, after review) |
-| cancelled | cancelled / closed |
+## Comments on transitions
 
-Use `mcp__clickup__clickup_update_task` with `status`, then `mcp__clickup__clickup_create_task_comment`
-for a one-paragraph note (PR links, summary, or the blocking issue title). Don't comment on every
-minor change - only on transitions.
+On a real transition (started, in review, blocked, handed back, done) post a one-paragraph
+`mcp__clickup__clickup_create_task_comment` (PR links, summary, or the blocking issue title). Don't
+comment on every minor change.
 
 When mentioning a ClickUp task to the user, write it as a markdown link with the task name as text.

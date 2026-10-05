@@ -10,7 +10,7 @@
       "name": "forge",
       "source": "./",
       "description": "Project/task orchestration over Claude Code background worker sessions.",
-      "version": "0.1.7"
+      "version": "0.1.8"
     }
   ]
 }

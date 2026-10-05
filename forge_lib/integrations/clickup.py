@@ -67,11 +67,24 @@ def create_task(list_id: str, name: str, description: str = "", parent: str | No
     return _request("POST", f"/list/{urllib.parse.quote(str(list_id))}/task", payload=payload)
 
 
-def task_summary(task: dict) -> dict:
+def update_status(task_id: str, status: str) -> dict:
+    return _request("PUT", f"/task/{urllib.parse.quote(str(task_id))}", payload={"status": status})
+
+
+def list_statuses(list_id: str) -> list[str]:
+    data = _request("GET", f"/list/{urllib.parse.quote(str(list_id))}")
+    return [s.get("status") for s in data.get("statuses") or [] if s.get("status")]
+
+
+def status_of(task: dict) -> str | None:
     status = task.get("status")
+    return status.get("status") if isinstance(status, dict) else status
+
+
+def task_summary(task: dict) -> dict:
     return {
         "id": task.get("id"), "custom_id": task.get("custom_id"), "name": task.get("name"),
-        "status": status.get("status") if isinstance(status, dict) else status,
+        "status": status_of(task),
         "url": task.get("url"),
         "assignees": [a.get("username") or a.get("email") for a in task.get("assignees") or []],
         "subtasks": [task_summary(s) for s in task.get("subtasks") or []],

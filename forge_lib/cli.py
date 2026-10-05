@@ -6,7 +6,7 @@ import sys
 import traceback
 from pathlib import Path
 
-from forge_lib import (adopt, agents, dispatch, gate, hooks, inbox, issues, keys, prs, render, state, tasks,
+from forge_lib import (adopt, agents, clickup_sync, dispatch, gate, hooks, inbox, issues, keys, prs, render, state, tasks,
                        tests_store, util)
 from forge_lib.errors import ForgeError, UsageError
 
@@ -295,6 +295,36 @@ def cmd_adopt_scan(args):
                      indent=2, ensure_ascii=False))
 
 
+def cmd_clickup_link(args):
+    t = clickup_sync.link(args.key, args.ref)
+    ref = t["clickup"]
+    text = f"{args.key} -> {ref.get('custom_id') or ref.get('id')} {ref.get('url') or ''}".rstrip()
+    if not ref.get("id"):
+        text += "\nwarning: no ClickUp task id resolved (CLICKUP_TOKEN unset?); status sync needs the id"
+    _out(args, t, text)
+
+
+def cmd_clickup_link_subtasks(args):
+    rows = clickup_sync.link_subtasks(args.project)
+    _out(args, rows, "\n".join(f"{r['key']}\t{r['custom_id']}\t{r['action']}" for r in rows)
+         or "(no forge task matches a subtask custom id)")
+
+
+def cmd_clickup_sync(args):
+    rows = clickup_sync.sync(args.target, dry_run=args.dry_run)
+    lines = []
+    for r in rows:
+        name = r["custom_id"] or r["clickup_id"]
+        if args.dry_run:
+            lines.append(f"{r['key']}\t{name}\t{r.get('current') or '?'} -> {r['target'] or '(unmapped)'}"
+                         + (f"\terror: {r['error']}" if r.get("error") else ""))
+        else:
+            lines.append(f"{r['key']}\t{name}\t{r['target'] or '(unmapped)'}\t"
+                         + (f"FAILED: {r['error']}" if r.get("error") else "ok"))
+    _out(args, rows, "\n".join(lines) or "(no linked tasks)")
+    return 1 if any(r.get("error") for r in rows) else 0
+
+
 def cmd_ui(args):
     server = REPO_ROOT / "ui" / "server.py"
     if not server.exists():
@@ -471,6 +501,14 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--clickup-parent", required=True)
     sp.add_argument("--repo")
     sp.add_argument("--github")
+    clickup_ = group("clickup")
+    sp = clickup_("link", cmd_clickup_link)
+    sp.add_argument("key")
+    sp.add_argument("ref", help="ClickUp task id, custom id (ENG-123) or URL")
+    clickup_("link-subtasks", cmd_clickup_link_subtasks).add_argument("project")
+    sp = clickup_("sync", cmd_clickup_sync)
+    sp.add_argument("target", help="project slug or task key")
+    sp.add_argument("--dry-run", action="store_true", help="show current -> target status without writing")
     add("ui", cmd_ui).add_argument("--port", type=int, default=7777)
     return p
 

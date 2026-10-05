@@ -5,6 +5,8 @@ const AUTO_REFRESH_MS = 30000;
 const AGENT_REFRESH_MS = 4000;
 const AGENT_TAIL_LIMIT = 200;
 const DONE_STATES = ['handed-back', 'done'];
+// Fallback only; /api/task returns forge_lib.state.STATES as task_states.
+const TASK_STATES = ['scoped', 'dispatched', 'in-progress', 'blocked', 'in-review', 'handed-back', 'done', 'coordinating', 'cancelled'];
 const SEVERITIES = ['blocker', 'decision', 'question', 'fyi'];
 const ISSUE_STATUSES = ['open', 'resolved', 'wontfix'];
 const ISSUE_STATES = ['open', 'awaiting-user', 'decided', 'in-progress', 'resolved', 'wontfix'];
@@ -15,6 +17,7 @@ const ui = {
   collapsed: new Set(),   // task keys collapsed in the tree
   expanded: new Set(),    // expandable row ids (PR threads)
   drafts: {},             // comment-box drafts by form id
+  taskStateMsg: {},       // last task-state apply result by task key: {text, error}
   lastSig: null,
   agentTimer: null,      // live transcript poller on #/agent/<key>
   agentSig: null,
@@ -177,6 +180,47 @@ function clickupCell(ref, cuMap) {
   const live = cuMap && (cuMap.get(ref.id) || cuMap.get(ref.custom_id));
   const status = live ? ` ${badge(live.status, 'cu')}` : '';
   return `${link(ref.url, ref.custom_id || ref.id)}${status}`;
+}
+
+function clickupSyncCell(sync) {
+  if (!sync) return '';
+  const when = sync.at ? ` <span class="small muted">${ago(sync.at)}</span>` : '';
+  return sync.error
+    ? ` <span class="pill bad small" title="${esc(sync.error)}">ClickUp sync failed: ${esc(sync.status)}</span>${when}`
+    : ` <span class="small">ClickUp: ${esc(sync.status)} ✓</span>${when}`;
+}
+
+function taskStateForm(t, states) {
+  const opts = (states && states.length ? states : TASK_STATES)
+    .map((x) => `<option value="${esc(x)}"${x === t.state ? ' selected' : ''}>${esc(x)}</option>`).join('');
+  const msg = ui.taskStateMsg[t.key];
+  return `<form class="comment-form" data-form="task-state" data-key="${esc(t.key)}" data-current="${esc(t.state)}">
+      <div class="form-row"><label class="small muted">State</label><select name="state">${opts}</select>
+        <input type="text" name="note" placeholder="Note (optional)"><button class="btn" type="submit">Apply</button>
+        ${msg ? `<span class="small ${msg.error ? 'pill bad' : ''}">${esc(msg.text)}</span>` : ''}</div></form>`;
+}
+
+async function submitTaskState(form) {
+  const key = form.dataset.key;
+  const state = $('[name="state"]', form).value;
+  const note = $('[name="note"]', form).value.trim();
+  if (state === 'handed-back' && form.dataset.current !== 'handed-back'
+      && !window.confirm('Mark this task handed-back from the UI?\n\nThis SKIPS the forge gate (CI, SonarCloud, '
+        + 'review threads, tests, issues). The state history will record "via UI (gate skipped)".')) return;
+  const btn = $('button[type="submit"]', form);
+  btn.disabled = true;
+  try {
+    const r = await api('/api/task/state', { key, state, note });
+    const sync = r.clickup_pushed ? r.clickup_sync : null;
+    const cu = !sync ? '' : sync.error ? ` · ClickUp: ${sync.status} failed: ${sync.error}` : ` · ClickUp: ${sync.status} ✓`;
+    ui.taskStateMsg[key] = { text: `${r.task.state}${cu}`, error: Boolean(sync && sync.error) };
+  } catch (err) {
+    ui.taskStateMsg[key] = { text: `Failed: ${err.message}`, error: true };
+  } finally {
+    btn.disabled = false;
+  }
+  ui.lastSig = null;
+  await render(true);
 }
 
 function countsCell(counts) {
@@ -459,9 +503,10 @@ views.task = {
     const history = (t.state_history || []).map((h) => `<li>${badge(h.state)} ${ago(h.at)} ${h.note ? `<span class="small muted">— ${esc(h.note)}</span>` : ''}</li>`).join('');
     return `<nav class="crumbs">${crumbs.join(' / ')}</nav>
       <h1>${esc(t.title)} ${badge(t.state)}</h1>
+      ${taskStateForm(t, d.task_states)}
       <div class="meta">
         <span>Session: ${sessionCell(t.session, d.active_sessions)} ${ilink(agentHref(t.key), t.session ? 'Watch agent →' : 'Agent →')}</span>
-        <span>ClickUp: ${clickupCell(t.clickup, null)}</span>
+        <span>ClickUp: ${clickupCell(t.clickup, null)}${t.clickup ? clickupSyncCell(t.clickup_sync) : ''}</span>
         <span>Repo: <span class="mono small">${esc(t.github || t.repo || '—')}</span> @ ${esc(t.base_branch || '')}</span>
         ${(t.depends_on || []).length ? `<span>Depends on: ${t.depends_on.map((k) => ilink(taskHref(k), shortKey(k))).join(', ')}</span>` : ''}
         <span>Updated ${ago(t.updated)}</span>
@@ -1260,6 +1305,8 @@ document.addEventListener('submit', (ev) => {
   if (agentForm) { ev.preventDefault(); sendAgentMessage(agentForm); return; }
   const issueForm = ev.target.closest('form[data-form="decide"], form[data-form="issue-state"]');
   if (issueForm) { ev.preventDefault(); submitIssueForm(issueForm); return; }
+  const stateForm = ev.target.closest('form[data-form="task-state"]');
+  if (stateForm) { ev.preventDefault(); submitTaskState(stateForm); return; }
   const form = ev.target.closest('form[data-form="comment"]');
   if (!form) return;
   ev.preventDefault();
