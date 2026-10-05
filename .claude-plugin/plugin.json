@@ -1,0 +1,11 @@
+{
+  "name": "forge",
+  "version": "0.1.5",
+  "description": "Run projects as trees of tasks, each owned end-to-end by a long-lived Claude Code background worker session: scoping, splitting, dispatch, stacked PRs, CI/Sonar gate, ClickUp sync, issues and an inbox.",
+  "author": {
+    "name": "Tien Anh Nguyen",
+    "email": "17221315+tienanh2007@users.noreply.github.com"
+  },
+  "license": "UNLICENSED",
+  "keywords": ["orchestration", "workers", "background-sessions", "clickup", "stacked-prs", "ci"]
+}

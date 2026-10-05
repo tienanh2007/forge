@@ -1,0 +1,16 @@
+{
+  "name": "forge",
+  "description": "Local marketplace for the forge plugin.",
+  "owner": {
+    "name": "Tien Anh Nguyen",
+    "email": "17221315+tienanh2007@users.noreply.github.com"
+  },
+  "plugins": [
+    {
+      "name": "forge",
+      "source": "./",
+      "description": "Project/task orchestration over Claude Code background worker sessions.",
+      "version": "0.1.5"
+    }
+  ]
+}
