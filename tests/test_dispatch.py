@@ -83,6 +83,13 @@ class DispatchTest(ForgeTestCase):
         self.assertEqual(dispatch.dispatch(self.key, dry_run=True).cmd[:4],
                          ["claude", "--bg", "--permission-mode", "bypassPermissions"])
 
+    def test_message_to_handed_back_task_keeps_state(self):
+        self._with_session()
+        tasks.set_state(self.key, "handed-back", allow_handback=True)
+        self.set_agents([])
+        self.assertEqual(dispatch.dispatch(self.key, "publish the walkthrough").code, 0)
+        self.assertEqual(state.load_task(self.key)["state"], "handed-back")
+
     def test_redispatch_inactive_resumes(self):
         self._with_session()
         self.set_agents([{"sessionId": "someone-else", "state": "working"}])

@@ -11,7 +11,8 @@ EXIT_OK, EXIT_REFUSED, EXIT_ACTIVE = 0, 1, 3
 # "done"/"idle" = turn finished but the process is alive and reachable via SendMessage; resuming it would fork.
 INACTIVE_STATES = {"failed", "stopped", "exited", "killed", "errored"}
 # Re-dispatch keeps these states: the worker is mid-flight and owns them.
-KEEP_STATES = ("in-progress", "in-review", "coordinating")
+# handed-back stays: a follow-up message to a handed-back worker is not new work until it says so.
+KEEP_STATES = ("in-progress", "in-review", "coordinating", "handed-back")
 # Background sessions take a moment to appear in `claude agents --json`.
 RESOLVE_ATTEMPTS, RESOLVE_DELAY_S = 10, 1.5
 

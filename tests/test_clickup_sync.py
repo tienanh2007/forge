@@ -103,13 +103,27 @@ class ClickupSyncTest(ForgeTestCase):
         code, out, _ = self.forge("clickup", "link-subtasks", "proj", "--json")
         self.assertEqual(code, 0)
         self.assertEqual(json.loads(out), [
-            {"key": "proj/ENG-2", "custom_id": "ENG-2", "action": "linked"},
+            {"key": "proj/ENG-2", "custom_id": "ENG-2", "action": "skipped (subtask linked to proj/ENG-2-b)"},
             {"key": "proj/ENG-2-b", "custom_id": "ENG-2", "action": "skipped (already linked)"},
             {"key": "proj/ENG-3-cte-mask", "custom_id": "ENG-3", "action": "linked"}])
         self.assertEqual(state.load_task("proj/ENG-3-cte-mask")["clickup"], {"id": "86c", "custom_id": "ENG-3",
                                                                             "url": "u3"})
         self.assertIsNone(state.load_task("proj/misc")["clickup"])
+        self.assertIsNone(state.load_task("proj/ENG-2")["clickup"])
         self.assertEqual(http.call_args[0][1], "https://api.clickup.com/api/v2/task/86p?include_subtasks=true")
+
+    @mock.patch(HTTP)
+    def test_link_subtasks_skips_cancelled(self, http):
+        tasks.new_task("proj", "ENG-3-old-long-name", "old")
+        tasks.set_state("proj/ENG-3-old-long-name", "cancelled")
+        tasks.new_task("proj", "ENG-3-new", "new")
+        http.return_value = (200, json.dumps(PARENT))
+        code, out, _ = self.forge("clickup", "link-subtasks", "proj", "--json")
+        self.assertEqual(code, 0)
+        rows = {r["key"]: r["action"] for r in json.loads(out)}
+        self.assertEqual(rows["proj/ENG-3-old-long-name"], "skipped (cancelled)")
+        self.assertEqual(rows["proj/ENG-3-new"], "linked")
+        self.assertIsNone(state.load_task("proj/ENG-3-old-long-name")["clickup"])
 
     @mock.patch(HTTP)
     def test_sync_dry_run_does_not_write(self, http):

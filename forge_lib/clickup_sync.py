@@ -85,13 +85,27 @@ def _matches(dir_name: str, custom_id: str | None) -> bool:
 def link_subtasks(project: str) -> list[dict]:
     """Link each forge task whose directory name starts with a parent subtask's custom id."""
     subtasks = _parent(project).get("subtasks") or []
+    keys = state.all_task_keys(project)
+    # One subtask, one forge task: two would push conflicting statuses to the same ticket.
+    claimed = {(state.load_task(k).get("clickup") or {}).get("id"): k for k in keys}
+    claimed.pop(None, None)
     rows = []
-    for key in state.all_task_keys(project):
+    for key in keys:
         task = state.load_task(key)
         dir_name = key.rsplit("/", 1)[-1]
         sub = next((s for s in subtasks if _matches(dir_name, s.get("custom_id"))), None)
         if not sub:
             continue
+        if not (task.get("clickup") or {}).get("id"):
+            # A cancelled task (e.g. one re-created under a shorter dir) must not drive the live subtask.
+            if task.get("state") == "cancelled":
+                rows.append({"key": key, "custom_id": sub.get("custom_id"), "action": "skipped (cancelled)"})
+                continue
+            if sub.get("id") in claimed:
+                rows.append({"key": key, "custom_id": sub.get("custom_id"),
+                             "action": f"skipped (subtask linked to {claimed[sub.get('id')]})"})
+                continue
+            claimed[sub.get("id")] = key
         if (task.get("clickup") or {}).get("id"):
             rows.append({"key": key, "custom_id": sub.get("custom_id"), "action": "skipped (already linked)"})
             continue
