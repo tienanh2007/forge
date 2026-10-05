@@ -27,7 +27,7 @@ description: Use in a forge coordinator (or a coordinating worker) when a task h
    - Optionally skim diffs (`gh pr diff <n> -R <repo>`) or run superpowers:requesting-code-review.
 5. **Accept:**
    - `forge set-state <key> done --note "accepted: <one line>"`.
-   - ClickUp: set the task's ClickUp subtask to its review/done status (see `forge:clickup-task`),
+   - ClickUp: status follows `forge set-state` automatically; check `clickup_sync` has no error (see `forge:clickup-task`),
      comment the summary + PR links.
    - `forge ready <project>` and tell the user which tasks are now unblocked (hand to `forge:dispatch`).
 6. **Send back:**

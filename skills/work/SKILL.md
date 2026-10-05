@@ -138,7 +138,8 @@ Then `forge set-state $K in-progress` if the task was blocked. The gate fails wh
 
 ## 10. ClickUp status
 
-Update the subtask status on transitions (in progress, in review, blocked) per `forge:clickup-task`.
+forge pushes the subtask status on every `set-state`/`handback`; don't set it yourself. Post a
+comment on real transitions per `forge:clickup-task`, and report any `clickup_sync.error`.
 
 ## 11. Too big -> split inside your task
 
@@ -165,7 +166,7 @@ child (log which). Hand back only when all children are handed-back/done.
    forge handback $K --summary "<what was delivered, PR links, walkthrough artifact URL, fable review outcome, tests evidence, follow-ups>" \
      --docs "<docs updated with paths, or 'none needed: <why>'>"
    ```
-3. Update ClickUp subtask to its review status and comment the summary.
+3. Comment the summary on the ClickUp subtask (forge already moved it to its review status).
 4. Notify the owner of the parent: if `task.parent_key` is set, SendMessage to that task's session
    name (`forge show <parent_key> --json` -> `session.name`); else to the project's
    `coordinator_session.name` (`cat "$(forge path <slug>)/project.json"`). Message: `Handback <K>: <2-line summary>`.
