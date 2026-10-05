@@ -72,6 +72,9 @@ Environment variables with the same names take precedence. GitHub access goes th
    Approve or edit it.
 3. **Dispatch** - `/forge:dispatch` starts up to `max_parallel` workers (default 5):
    each is `claude --bg` in its own worktree named `forge-<project>-<task>`.
+   Workers launch with the project's `permission_mode` (`forge init-project --permission-mode`,
+   default `auto`); keep it equal to the coordinator's mode, or every message between them is held
+   for your approval.
 4. **Watch and steer** - the UI **Agents** view (`#/agents`) lists every task and coordinator with its
    session, live state and last activity; each agent page shows the live transcript (refreshing every
    4s) and a "Message this agent" box. From the terminal: `forge agents` and
