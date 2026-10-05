@@ -149,9 +149,20 @@ child (log which). Hand back only when all children are handed-back/done.
 
 ## 12. Hand back
 
+0. **Fable review pass (required for any task with PRs).** Before handing back, dispatch an
+   independent reviewer with the Agent tool: `subagent_type: "general-purpose"`, `model: "fable"`.
+   Give it the PR URLs, `spec.md`, `tests.md` and the repo path; ask it to read the diffs
+   (`gh pr diff`) and report only problems it can point at (file/function, line): correctness bugs,
+   spec criteria not met, missing or weak tests, risky changes (compatibility, defaults, error
+   handling), and docs the repo requires. No style nits. Then:
+   - Fix every finding you agree with (TDD as in section 5), push, and let CI re-run.
+   - For a finding you reject, note why in `log.md`; if it needs the user's call, `forge:write-issue`.
+   - Append `## <UTC time> fable review` to `log.md`: findings, what was fixed, what was rejected
+     and why. If you changed code, re-run the review once on the new diff.
+   Tasks that hand back with no PR skip this step.
 1. `forge prs refresh $K && forge gate $K` - must exit 0. Fix every reason it lists.
 2. ```bash
-   forge handback $K --summary "<what was delivered, PR links, walkthrough artifact URL, tests evidence, follow-ups>" \
+   forge handback $K --summary "<what was delivered, PR links, walkthrough artifact URL, fable review outcome, tests evidence, follow-ups>" \
      --docs "<docs updated with paths, or 'none needed: <why>'>"
    ```
 3. Update ClickUp subtask to its review status and comment the summary.

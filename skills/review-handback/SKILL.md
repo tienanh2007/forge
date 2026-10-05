@@ -21,6 +21,9 @@ description: Use in a forge coordinator (or a coordinating worker) when a task h
          (a decision not yet acted on; the gate also fails on these), none `awaiting-user` or `open`
          without a note why, and each resolved decision's `resolution` says what was done. The project
          view is `$(forge path <project>)/decisions.md`.
+   - [ ] Fable review ran (tasks with PRs): `log.md` has a `fable review` entry on the final diff,
+         every finding is fixed or rejected with a reason, and the handback summary states the outcome.
+         Missing -> send back.
    - Optionally skim diffs (`gh pr diff <n> -R <repo>`) or run superpowers:requesting-code-review.
 5. **Accept:**
    - `forge set-state <key> done --note "accepted: <one line>"`.
