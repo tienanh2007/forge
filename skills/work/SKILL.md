@@ -69,6 +69,15 @@ For other repos, run tests locally and paste the relevant output excerpt as evid
 Before every push: `./gradlew spotlessApply` on affected modules (Gradle repos); follow the repo's
 CLAUDE.md coding standards. Use superpowers:verification-before-completion before claiming green.
 
+**Comment density (recurring review complaint).** Before every push, compare added comment lines with
+added code lines in the diff (`git diff origin/<base>...HEAD`); if comments approach or exceed the
+code, cut them.
+- Keep only what a reader cannot infer from the code: a non-obvious failure mode, a constraint from
+  elsewhere in the system, a ticket id for a known hole. One line where one line works.
+- Design rationale (why this shape over the alternative, what the ticket got wrong) goes in the PR
+  description and the ticket, not in Javadoc/Scaladoc.
+- A comment describing a bug is not a record: file the ticket and reference it.
+
 ## 6. Document
 
 - Repo docs: update/add `docs/...` as the repo's CLAUDE.md requires (new handler/workflow/flag/
@@ -155,7 +164,8 @@ child (log which). Hand back only when all children are handed-back/done.
    Give it the PR URLs, `spec.md`, `tests.md` and the repo path; ask it to read the diffs
    (`gh pr diff`) and report only problems it can point at (file/function, line): correctness bugs,
    spec criteria not met, missing or weak tests, risky changes (compatibility, defaults, error
-   handling), and docs the repo requires. No style nits. Then:
+   handling), docs the repo requires, and verbose comments (comment blocks that restate the code or
+   carry design rationale that belongs in the PR description). No other style nits. Then:
    - Fix every finding you agree with (TDD as in section 5), push, and let CI re-run.
    - For a finding you reject, note why in `log.md`; if it needs the user's call, `forge:write-issue`.
    - Append `## <UTC time> fable review` to `log.md`: findings, what was fixed, what was rejected
