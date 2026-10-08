@@ -73,8 +73,10 @@ Environment variables with the same names take precedence. GitHub access goes th
 3. **Dispatch** - `/forge:dispatch` starts up to `max_parallel` workers (default 5):
    each is `claude --bg` in its own worktree named `forge-<project>-<task>`.
    Workers launch with the project's `permission_mode` (`forge init-project --permission-mode`,
-   default `auto`); keep it equal to the coordinator's mode, or every message between them is held
-   for your approval.
+   default `auto`), and with `--settings '{"crossSessionInbound":"accept"}'` so messages from the UI
+   bridge and the coordinator reach them even when their permission-mode classes differ. Without
+   it, Claude Code holds those messages for manual approval inside the worker session. Only worker
+   sessions get this setting.
 4. **Watch and steer** - the UI **Agents** view (`#/agents`) lists every task and coordinator with its
    session, live state and last activity; each agent page shows the live transcript (refreshing every
    4s) and a "Message this agent" box. From the terminal: `forge agents` and

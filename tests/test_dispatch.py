@@ -16,7 +16,7 @@ class DispatchTest(ForgeTestCase):
     def test_dry_run_first_dispatch(self):
         r = dispatch.dispatch(self.key, dry_run=True)
         self.assertEqual(r.code, 0)
-        self.assertEqual(r.cmd, ["claude", "--bg", "--permission-mode", "auto", "-n", "forge-proj-T1-a", "-w", "forge-proj-T1-a", self.prompt])
+        self.assertEqual(r.cmd, ["claude", "--bg", "--permission-mode", "auto", "--settings", '{"crossSessionInbound": "accept"}', "-n", "forge-proj-T1-a", "-w", "forge-proj-T1-a", self.prompt])
         self.assertEqual(r.cwd, str(self.repo.resolve()))
         self.assertEqual(self.claude_calls(), [])
         self.assertIsNone(state.load_task(self.key)["session"])
@@ -29,7 +29,7 @@ class DispatchTest(ForgeTestCase):
         r = dispatch.dispatch(self.key, message="Focus on the DAO.")
         self.assertEqual(r.code, 0, r.output)
         calls = self.claude_calls()
-        self.assertEqual(calls[0]["argv"], ["--bg", "--permission-mode", "auto", "-n", "forge-proj-T1-a", "-w", "forge-proj-T1-a",
+        self.assertEqual(calls[0]["argv"], ["--bg", "--permission-mode", "auto", "--settings", '{"crossSessionInbound": "accept"}', "-n", "forge-proj-T1-a", "-w", "forge-proj-T1-a",
                                             self.prompt + "\n\nFocus on the DAO."])
         self.assertEqual(calls[0]["cwd"], str(self.repo.resolve()))
         self.assertEqual(calls[1]["argv"], ["agents", "--json", "--all"])
@@ -77,7 +77,7 @@ class DispatchTest(ForgeTestCase):
         project = state.load_project("proj")
         project["permission_mode"] = "default"
         state.save("proj", project)
-        self.assertEqual(dispatch.dispatch(self.key, dry_run=True).cmd[:3], ["claude", "--bg", "-n"])
+        self.assertEqual(dispatch.dispatch(self.key, dry_run=True).cmd[:5], ["claude", "--bg", "--settings", '{"crossSessionInbound": "accept"}', "-n"])
         project["permission_mode"] = "bypassPermissions"
         state.save("proj", project)
         self.assertEqual(dispatch.dispatch(self.key, dry_run=True).cmd[:4],
@@ -89,7 +89,7 @@ class DispatchTest(ForgeTestCase):
         r = dispatch.dispatch(self.key)
         self.assertEqual(r.code, 0, r.output)
         self.assertEqual([c["argv"] for c in self.claude_calls() if c["argv"][0] == "--bg"][-1],
-                         ["--bg", "--permission-mode", "auto", "-n", "forge-proj-T1-a", "--resume", self.sid, "Resume task proj/T1-a; check inbox."])
+                         ["--bg", "--permission-mode", "auto", "--settings", '{"crossSessionInbound": "accept"}', "-n", "forge-proj-T1-a", "--resume", self.sid, "Resume task proj/T1-a; check inbox."])
         self.assertEqual(state.load_task(self.key)["state"], "in-progress")
         self.assertEqual(state.load_json_items(self.key, "inbox"), [])
 
@@ -102,7 +102,7 @@ class DispatchTest(ForgeTestCase):
         r = dispatch.dispatch(self.key, "answer: use postgres", require_session=True)
         self.assertEqual(r.code, 0)
         self.assertEqual([c["argv"] for c in self.claude_calls()
-                          if c["argv"][0] == "--bg"][-1], ["--bg", "--permission-mode", "auto", "-n", "forge-proj-T1-a", "--resume", self.sid,
+                          if c["argv"][0] == "--bg"][-1], ["--bg", "--permission-mode", "auto", "--settings", '{"crossSessionInbound": "accept"}', "-n", "forge-proj-T1-a", "--resume", self.sid,
                                                            "answer: use postgres"])
         self.assertEqual(state.load_task(self.key)["state"], "dispatched")
 

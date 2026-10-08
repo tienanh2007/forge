@@ -124,8 +124,8 @@ class SendAndOverviewTest(ForgeTestCase):
         r = agents.send(self.key, "hi")
         self.assertEqual((r["mode"], r["delivered"]), ("resumed", True))
         resume = [c for c in self.claude_calls() if "--resume" in c["argv"]][0]
-        self.assertEqual(resume["argv"][:7], ["--bg", "--permission-mode", "auto", "-n", "forge-proj-T1-a", "--resume", SID])
-        self.assertIn("forge inbox proj/T1-a C-1: hi", resume["argv"][7])
+        self.assertEqual(resume["argv"][:9], ["--bg", "--permission-mode", "auto", "--settings", '{"crossSessionInbound": "accept"}', "-n", "forge-proj-T1-a", "--resume", SID])
+        self.assertIn("forge inbox proj/T1-a C-1: hi", resume["argv"][9])
         self.assertEqual(self.bridge_calls(), [])
 
     def test_send_without_session_refuses(self):

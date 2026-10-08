@@ -14,6 +14,9 @@ INACTIVE_STATES = {"failed", "stopped", "exited", "killed", "errored"}
 KEEP_STATES = ("in-progress", "in-review", "coordinating")
 # Background sessions take a moment to appear in `claude agents --json`.
 RESOLVE_ATTEMPTS, RESOLVE_DELAY_S = 10, 1.5
+# Workers run in a different permission-mode class than the UI bridge and coordinators, so Claude Code
+# would hold their inbound messages for manual approval; accept them for worker sessions only.
+WORKER_SETTINGS = {"crossSessionInbound": "accept"}
 
 
 @dataclass
@@ -47,7 +50,8 @@ def permission_mode(key: str) -> str | None:
 
 def _bg(key: str, session: dict) -> list[str]:
     mode = permission_mode(key)
-    return ["claude", "--bg"] + (["--permission-mode", mode] if mode else []) + ["-n", session["name"]]
+    return (["claude", "--bg"] + (["--permission-mode", mode] if mode else [])
+            + ["--settings", json.dumps(WORKER_SETTINGS), "-n", session["name"]])
 
 
 def first_command(key: str, session: dict, message: str | None = None) -> list[str]:
